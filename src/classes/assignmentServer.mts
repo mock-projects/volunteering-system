@@ -2,24 +2,27 @@ import type {Task} from './task.mts'
 import type {Volunteer} from './volunteer.mts'
 
 class AssignmentServer {
-	tasks: Record<number, Task>
-	volunteers: Record<number, Volunteer>
+	tasksById: Record<number, Task>
+	volunteersById: Record<number, Volunteer>
 	assignments: Map<Task, Volunteer>
 
 	constructor(
-		tasks: Record<number, Task>,
-		volunteers: Record<number, Volunteer>,
+		tasksById: Record<number, Task>,
+		volunteersById: Record<number, Volunteer>,
 	) {
-		this.tasks = tasks
-		this.volunteers = volunteers
+		this.tasksById = tasksById
+		this.volunteersById = volunteersById
 		this.assignments = new Map( )
 	}
+
+	get tasks( ) {return Object.values(this.tasksById)}
+	get volunteers( ) {return Object.values(this.volunteersById)}
 
 	/**
 	 * Returns a list of volunteers who are interested in the given task.
 	 */
 	getInterestedVolunteers(task: Task): Volunteer[ ] {
-		return Object.values(this.volunteers).filter((volunteer) => {
+		return this.volunteers.filter((volunteer) => {
 			return volunteer.isInterested(task)
 		})
 	}
@@ -28,15 +31,14 @@ class AssignmentServer {
 	 * Assigns a volunteer to each task based on their interests.
 	 */
 	assignTasks( ) {
-		for (const task of Object.values(this.tasks)) {
+		for (const task of this.tasks) {
 			const interestedVolunteers = this.getInterestedVolunteers(task)
-			const allVolunteers = Object.values(this.volunteers)
 			let volunteer
 			if (interestedVolunteers.length > 0) {
 				volunteer = interestedVolunteers[0]
 			}
 			else {
-				volunteer = allVolunteers[0]
+				volunteer = this.volunteers[0]
 			}
 			if (volunteer == null) {
 				throw new Error('A task remained unassigned.')
@@ -49,7 +51,7 @@ class AssignmentServer {
 	 * Prints assignments of volunteers to tasks.
 	 */
 	printAssignments( ) {
-		for (const task of Object.values(this.tasks)) {
+		for (const task of this.tasks) {
 			const assignee = this.assignments.get(task)
 			console.log(`${task}`)
 			if (assignee !== undefined) {
