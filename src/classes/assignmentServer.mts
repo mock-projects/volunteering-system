@@ -40,6 +40,17 @@ class AssignmentServer {
 	}
 
 	/**
+	 * Returns the overall satisfaction rating for all volunteers in the server.
+	 */
+	getSatisfactionScore( ): number {
+		let score = 0
+		for (const [volunteer, tasks] of this.assignees.entries( )) {
+			score += volunteer.getSatisfactionScore(tasks)
+		}
+		return score
+	}
+
+	/**
 	 * Assigns a volunteer to each task based on their interests.
 	 */
 	assignTasks( ) {
@@ -76,6 +87,7 @@ class AssignmentServer {
 			}
 			console.log( )
 		}
+		console.log(`Satisfaction Score: ${this.getSatisfactionScore( )}`)
 	}
 }
 
