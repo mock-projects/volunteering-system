@@ -34,7 +34,8 @@ class AssignmentServer {
 			let volunteer
 			if (interestedVolunteers.length > 0) {
 				volunteer = interestedVolunteers[0]
-			} else {
+			}
+			else {
 				volunteer = allVolunteers[0]
 			}
 			if (volunteer == null) {
@@ -53,7 +54,8 @@ class AssignmentServer {
 			console.log(`${task}`)
 			if (assignee !== undefined) {
 				console.log(`\tAssigned to ${assignee}`)
-			} else {
+			}
+			else {
 				console.log('\tUnassigned')
 			}
 			console.log( )

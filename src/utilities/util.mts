@@ -32,7 +32,8 @@ const loadTasks = async (filename: string) => {
 		const parsedLine = line.split(',')
 		if (parsedLine.length <= 1) {
 			continue // This was an empty row, we can throw it out.
-		} else if (!isTaskCsvRow(parsedLine)) {
+		}
+		else if (!isTaskCsvRow(parsedLine)) {
 			throw new Error('Expected at least 4 task data fields.')
 		}
 
@@ -66,7 +67,8 @@ const loadVolunteers = async (
 		const parsedLine = line.split(',')
 		if (parsedLine.length <= 1) {
 			return // This was an empty row, we can throw it out.
-		} else if (!isVolunteerCsvRow(parsedLine)) {
+		}
+		else if (!isVolunteerCsvRow(parsedLine)) {
 			throw new Error('Expected exactly 3 volunteer data fields.')
 		}
 
