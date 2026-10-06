@@ -66,7 +66,7 @@ const loadVolunteers = async (
 		// CSV type guard
 		const parsedLine = line.split(',')
 		if (parsedLine.length <= 1) {
-			return // This was an empty row, we can throw it out.
+			continue // This was an empty row, we can throw it out.
 		}
 		else if (!isVolunteerCsvRow(parsedLine)) {
 			throw new Error('Expected exactly 3 volunteer data fields.')
