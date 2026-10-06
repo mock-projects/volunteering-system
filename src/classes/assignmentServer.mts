@@ -43,9 +43,12 @@ class AssignmentServer {
 	 * Returns the overall satisfaction rating for all volunteers in the server.
 	 */
 	getSatisfactionScore( ): number {
+		// Penalize the score of volunteers who get assigned too many tasks.
+		const maxTaskLoad = Math.ceil(this.tasks.length / this.volunteers.length)
+
 		let score = 0
 		for (const [volunteer, tasks] of this.assignees.entries( )) {
-			score += volunteer.getSatisfactionScore(tasks)
+			score += volunteer.getSatisfactionScore(tasks, maxTaskLoad)
 		}
 		return score
 	}
