@@ -29,6 +29,17 @@ class Volunteer {
 	isInterested(task: Task): boolean {
 		return this.interestedTasks.includes(task)
 	}
+
+	/**
+	 * Returns a number representing how desirable the given
+	 * task is to this volunteer.
+	 */
+	getTaskDesirabilityScore(task: Task): number {
+		// Obtain the index of the task from the list.
+		const taskIndex = this.interestedTasks.indexOf(task)
+		if (taskIndex === -1) return -1
+		else return Math.max(4 - taskIndex, 1)
+	}
 }
 
 export {Volunteer}
