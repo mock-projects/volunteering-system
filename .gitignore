@@ -5,5 +5,3 @@ __pycache__
 
 /.prettierrc.toml
 /ruff.toml
-/package-lock.json
-/package.json
