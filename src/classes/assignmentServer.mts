@@ -35,6 +35,18 @@ class AssignmentServer {
 	}
 
 	/**
+	 * Returns a sorted list of volunteers,
+	 * based on how interested they are in the given task.
+	 */
+	getVolunteersByInterestLevel(task: Task): Volunteer[ ] {
+		return this.volunteers.sort((vol01, vol02) => {
+			const score01 = vol01.getTaskDesirabilityScore(task)
+			const score02 = vol02.getTaskDesirabilityScore(task)
+			return score02 - score01
+		})
+	}
+
+	/**
 	 * Returns a number representing how satisfied a volunteer would be,
 	 * given a list of unique tasks that they are assigned.
 	 */
@@ -74,7 +86,7 @@ class AssignmentServer {
 	 */
 	assignTasks( ) {
 		for (const task of this.tasks) {
-			const volunteerCandidates = this.getInterestedVolunteers(task)
+			const volunteerCandidates = this.getVolunteersByInterestLevel(task)
 			if (task.volunteersNeeded > volunteerCandidates.length) {
 				throw new Error('A task needs too many volunteers.')
 			}
