@@ -74,18 +74,12 @@ class AssignmentServer {
 	 */
 	assignTasks( ) {
 		for (const task of this.tasks) {
-			const interestedVolunteers = this.getInterestedVolunteers(task)
-			let volunteer
-			if (interestedVolunteers.length > 0) {
-				volunteer = interestedVolunteers[0]
+			const volunteerCandidates = this.getInterestedVolunteers(task)
+			if (task.volunteersNeeded > volunteerCandidates.length) {
+				throw new Error('A task needs too many volunteers.')
 			}
-			else {
-				volunteer = this.volunteers[0]
-			}
-			if (volunteer == null) {
-				throw new Error('A task remained unassigned.')
-			}
-			task.assignees.push(volunteer)
+			const volunteers = volunteerCandidates.slice(0, task.volunteersNeeded)
+			task.assignees.push(...volunteers)
 		}
 	}
 
