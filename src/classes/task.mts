@@ -24,6 +24,27 @@ class Task {
 		this.assignees = new Set( )
 	}
 
+	/**
+	 * Returns a list of volunteers who are interested in the given task.
+	 */
+	getInterestedVolunteers( ): Volunteer[ ] {
+		return this.event.volunteers.filter((volunteer) => {
+			return volunteer.interestedTasks.includes(this)
+		})
+	}
+
+	/**
+	 * Returns a sorted list of volunteers,
+	 * based on how interested they are in the given task.
+	 */
+	getVolunteersByInterestLevel( ): Volunteer[ ] {
+		return this.event.volunteers.sort((vol01, vol02) => {
+			const score01 = vol01.getTaskDesirabilityScore(this)
+			const score02 = vol02.getTaskDesirabilityScore(this)
+			return score02 - score01
+		})
+	}
+
 	toString( ) {
 		return `Task #${this.id}: ${this.name}`
 	}
