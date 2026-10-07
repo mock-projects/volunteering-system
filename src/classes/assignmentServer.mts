@@ -2,26 +2,26 @@ import type {Task} from './task.mts'
 import type {Volunteer} from './volunteer.mts'
 
 class AssignmentServer {
-	tasksById: Record<number, Task>
-	volunteersById: Record<number, Volunteer>
+	#tasks: Set<Task>
+	#volunteers: Set<Volunteer>
 
 	constructor(
-		tasksById: Record<number, Task>,
-		volunteersById: Record<number, Volunteer>,
+		tasks: Iterable<Task>,
+		volunteers: Iterable<Volunteer>,
 	) {
-		this.tasksById = tasksById
-		this.volunteersById = volunteersById
+		this.#tasks = new Set(tasks)
+		this.#volunteers = new Set(volunteers)
 	}
 
-	get tasks( ) {return Object.values(this.tasksById)}
-	get volunteers( ) {return Object.values(this.volunteersById)}
+	get tasks( ) {return [...this.#tasks]}
+	get volunteers( ) {return [...this.#volunteers]}
 
 	/**
 	 * Returns a list of tasks that were assigned to specified volunteer.
 	 */
 	getAssignedTasks(volunteer: Volunteer): Task[ ] {
 		return this.tasks.filter((task) => {
-			return task.assignees.includes(volunteer)
+			return task.assignees.has(volunteer)
 		})
 	}
 
@@ -126,7 +126,7 @@ class AssignmentServer {
 				throw new Error('A task needs too many volunteers.')
 			}
 			const volunteers = volunteerCandidates.slice(0, task.volunteersNeeded)
-			task.assignees.push(...volunteers)
+			for (const volunteer of volunteers) task.assignees.add(volunteer)
 		}
 	}
 
@@ -137,7 +137,7 @@ class AssignmentServer {
 		for (const task of this.tasks) {
 			const assignees = task.assignees
 			console.log(`${task}`)
-			if (assignees !== undefined && assignees.length > 0) {
+			if (assignees !== undefined && assignees.size > 0) {
 				for (const assignee of assignees) {
 					console.log(`\tAssigned to ${assignee}`)
 				}

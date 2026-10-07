@@ -21,7 +21,7 @@ const isVolunteerCsvRow = (fields: string[ ]): fields is VolunteerCsvRow => (
 )
 
 const loadTasks = async (filename: string) => {
-	const tasks: Record<number, Task> = { }
+	const tasks: Set<Task> = new Set( )
 
 	const reader = readline.createInterface({
 		input: fs.createReadStream(filename),
@@ -47,7 +47,7 @@ const loadTasks = async (filename: string) => {
 		if (isNaN(taskId)) continue
 
 		// Create a new task given this data.
-		tasks[taskId] = new Task(taskId, name, description, volunteersNeeded)
+		tasks.add(new Task(taskId, name, description, volunteersNeeded))
 	}
 
 	return tasks
@@ -55,9 +55,10 @@ const loadTasks = async (filename: string) => {
 
 const loadVolunteers = async (
 	filename: string,
-	tasks: Record<number, Task>,
+	_tasks: Iterable<Task>,
 ) => {
-	const volunteers: Record<number, Volunteer> = { }
+	const tasks = [..._tasks]
+	const volunteers: Set<Volunteer> = new Set( )
 
 	const reader = readline.createInterface({
 		input: fs.createReadStream(filename),
@@ -88,11 +89,11 @@ const loadVolunteers = async (
 		// Create a new volunteer and add interested tasks.
 		const volunteer = new Volunteer(volunteerId, name)
 		taskIds
-			.map((taskId: number) => (tasks[taskId]))
+			.map((taskId: number) => (tasks.find((task) => (task.id === taskId))))
 			.filter((task): task is Task => (task !== undefined))
 			.forEach((task: Task) => (volunteer.interestedTasks.push(task)))
 
-		volunteers[volunteerId] = volunteer
+		volunteers.add(volunteer)
 	}
 
 	return volunteers

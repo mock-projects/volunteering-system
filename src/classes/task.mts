@@ -5,7 +5,7 @@ class Task {
 	name: string
 	description: string
 	volunteersNeeded: number
-	assignees: Volunteer[ ]
+	assignees: Set<Volunteer>
 
 	constructor(
 		id: number,
@@ -17,7 +17,7 @@ class Task {
 		this.name = name
 		this.description = description
 		this.volunteersNeeded = volunteersNeeded
-		this.assignees = [ ]
+		this.assignees = new Set( )
 	}
 
 	toString( ) {
