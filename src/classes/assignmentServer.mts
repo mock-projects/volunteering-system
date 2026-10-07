@@ -31,10 +31,10 @@ class AssignmentServer {
 			let score01 = 0
 			let score02 = 0
 
-			for (const volunteer of task01.assignees) {
+			for (const volunteer of task01.getInterestedVolunteers( )) {
 				score01 += volunteer.getTaskDesirabilityScore(task01)
 			}
-			for (const volunteer of task02.assignees) {
+			for (const volunteer of task02.getInterestedVolunteers( )) {
 				score02 += volunteer.getTaskDesirabilityScore(task02)
 			}
 
