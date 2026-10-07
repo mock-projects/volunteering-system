@@ -4,7 +4,6 @@ import type {Volunteer} from './volunteer.mts'
 class AssignmentServer {
 	tasksById: Record<number, Task>
 	volunteersById: Record<number, Volunteer>
-	assignments: Map<Task, Volunteer[ ]>
 
 	constructor(
 		tasksById: Record<number, Task>,
@@ -12,22 +11,18 @@ class AssignmentServer {
 	) {
 		this.tasksById = tasksById
 		this.volunteersById = volunteersById
-		this.assignments = new Map( )
 	}
 
 	get tasks( ) {return Object.values(this.tasksById)}
 	get volunteers( ) {return Object.values(this.volunteersById)}
 
-	get assignees( ): Map<Volunteer, Task[ ]> {
-		const allAssignees = new Map<Volunteer, Task[ ]>( )
-		for (const [task, assignees] of this.assignments.entries( )) {
-			for (const assignee of assignees) {
-				const assignments = allAssignees.get(assignee) ?? [ ]
-				assignments.push(task)
-				allAssignees.set(assignee, assignments)
-			}
-		}
-		return allAssignees
+	/**
+	 * Returns a list of tasks that were assigned to specified volunteer.
+	 */
+	getAssignedTasks(volunteer: Volunteer): Task[ ] {
+		return this.tasks.filter((task) => {
+			return task.assignees.includes(volunteer)
+		})
 	}
 
 	/**
@@ -35,20 +30,41 @@ class AssignmentServer {
 	 */
 	getInterestedVolunteers(task: Task): Volunteer[ ] {
 		return this.volunteers.filter((volunteer) => {
-			return volunteer.isInterested(task)
+			return volunteer.interestedTasks.includes(task)
 		})
+	}
+
+	/**
+	 * Returns a number representing how satisfied a volunteer would be,
+	 * given a list of unique tasks that they are assigned.
+	 */
+	getSatisfactionLevel(volunteer: Volunteer, desiredMaxLoad?: number): number {
+		const assignedTasks = this.getAssignedTasks(volunteer)
+
+		let score: number = 0
+		assignedTasks.forEach((task) => {
+			score += volunteer.getTaskDesirabilityScore(task)
+		})
+
+		if (!desiredMaxLoad) return score
+
+		// If there is a desired max load of tasks for this volunteer,
+		// then add a penalty for crossing that threshold.
+		const numOverloaded = assignedTasks.length - desiredMaxLoad
+		if (numOverloaded > 0) score -= numOverloaded
+		return score
 	}
 
 	/**
 	 * Returns the overall satisfaction rating for all volunteers in the server.
 	 */
-	getSatisfactionScore( ): number {
+	getOverallSatisfactionLevel( ): number {
 		// Penalize the score of volunteers who get assigned too many tasks.
 		const maxTaskLoad = Math.ceil(this.tasks.length / this.volunteers.length)
 
 		let score = 0
-		for (const [volunteer, tasks] of this.assignees.entries( )) {
-			score += volunteer.getSatisfactionScore(tasks, maxTaskLoad)
+		for (const volunteer of this.volunteers) {
+			score += this.getSatisfactionLevel(volunteer, maxTaskLoad)
 		}
 		return score
 	}
@@ -69,7 +85,7 @@ class AssignmentServer {
 			if (volunteer == null) {
 				throw new Error('A task remained unassigned.')
 			}
-			this.assignments.set(task, [volunteer])
+			task.assignees.push(volunteer)
 		}
 	}
 
@@ -78,7 +94,7 @@ class AssignmentServer {
 	 */
 	printAssignments( ) {
 		for (const task of this.tasks) {
-			const assignees = this.assignments.get(task)
+			const assignees = task.assignees
 			console.log(`${task}`)
 			if (assignees !== undefined && assignees.length > 0) {
 				for (const assignee of assignees) {
@@ -90,7 +106,7 @@ class AssignmentServer {
 			}
 			console.log( )
 		}
-		console.log(`Satisfaction Score: ${this.getSatisfactionScore( )}`)
+		console.log(`Satisfaction Score: ${this.getOverallSatisfactionLevel( )}`)
 	}
 }
 

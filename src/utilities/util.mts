@@ -89,7 +89,7 @@ const loadVolunteers = async (
 		taskIds
 			.map((taskId: number) => (tasks[taskId]))
 			.filter((task): task is Task => (task !== undefined))
-			.forEach((task: Task) => (volunteer.addInterestedTask(task)))
+			.forEach((task: Task) => (volunteer.interestedTasks.push(task)))
 
 		volunteers[volunteerId] = volunteer
 	}
