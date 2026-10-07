@@ -2,6 +2,7 @@ import * as fs from 'fs'
 import * as readline from 'readline'
 import {Task} from '../classes/task.mts'
 import {Volunteer} from '../classes/volunteer.mts'
+import type {AssignmentServer} from '../classes/assignmentServer.mts'
 
 type TaskCsvRow = [
 	id: string,
@@ -20,7 +21,7 @@ const isVolunteerCsvRow = (fields: string[ ]): fields is VolunteerCsvRow => (
 	fields.length === 3
 )
 
-const loadTasks = async (filename: string) => {
+const loadTasks = async (event: AssignmentServer, filename: string) => {
 	const tasks: Set<Task> = new Set( )
 
 	const reader = readline.createInterface({
@@ -47,17 +48,14 @@ const loadTasks = async (filename: string) => {
 		if (isNaN(taskId)) continue
 
 		// Create a new task given this data.
-		tasks.add(new Task(taskId, name, description, volunteersNeeded))
+		tasks.add(new Task(event, taskId, name, description, volunteersNeeded))
 	}
 
 	return tasks
 }
 
-const loadVolunteers = async (
-	filename: string,
-	_tasks: Iterable<Task>,
-) => {
-	const tasks = [..._tasks]
+const loadVolunteers = async (event: AssignmentServer, filename: string) => {
+	const tasks = event.tasks
 	const volunteers: Set<Volunteer> = new Set( )
 
 	const reader = readline.createInterface({
@@ -87,7 +85,7 @@ const loadVolunteers = async (
 		if (isNaN(volunteerId)) continue
 
 		// Create a new volunteer and add interested tasks.
-		const volunteer = new Volunteer(volunteerId, name)
+		const volunteer = new Volunteer(event, volunteerId, name)
 		taskIds
 			.map((taskId: number) => (tasks.find((task) => (task.id === taskId))))
 			.filter((task): task is Task => (task !== undefined))

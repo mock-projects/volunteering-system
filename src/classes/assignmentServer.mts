@@ -1,3 +1,4 @@
+import {loadTasks, loadVolunteers} from '../utilities/util.mts'
 import type {Task} from './task.mts'
 import type {Volunteer} from './volunteer.mts'
 
@@ -5,16 +6,21 @@ class AssignmentServer {
 	#tasks: Set<Task>
 	#volunteers: Set<Volunteer>
 
-	constructor(
-		tasks: Iterable<Task>,
-		volunteers: Iterable<Volunteer>,
-	) {
-		this.#tasks = new Set(tasks)
-		this.#volunteers = new Set(volunteers)
+	constructor( ) {
+		this.#tasks = new Set( )
+		this.#volunteers = new Set( )
 	}
 
 	get tasks( ) {return [...this.#tasks]}
 	get volunteers( ) {return [...this.#volunteers]}
+
+	async loadCsvData(
+		tasksCsvFilepath: string,
+		volunteersCsvFilePath: string,
+	) {
+		this.#tasks = await loadTasks(this, tasksCsvFilepath)
+		this.#volunteers = await loadVolunteers(this, volunteersCsvFilePath)
+	}
 
 	/**
 	 * Returns a list of tasks that were assigned to specified volunteer.

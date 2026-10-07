@@ -1,11 +1,14 @@
+import type {AssignmentServer} from './assignmentServer.mts'
 import type {Task} from './task.mts'
 
 class Volunteer {
+	event: AssignmentServer
 	id: number
 	name: string
 	interestedTasks: Task[ ]
 
-	constructor(id: number, name: string) {
+	constructor(event: AssignmentServer, id: number, name: string) {
+		this.event = event
 		this.id = id
 		this.name = name
 		this.interestedTasks = [ ]
