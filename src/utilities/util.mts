@@ -39,6 +39,7 @@ const loadTasks = async (filename: string) => {
 
 		const taskId = parseInt(parsedLine[0])
 		const name = parsedLine[1]
+		const volunteersNeeded = parseInt(parsedLine[2])
 		const description = parsedLine.slice(3).join(',')
 
 		// Skip invalid task IDs.
@@ -46,7 +47,7 @@ const loadTasks = async (filename: string) => {
 		if (isNaN(taskId)) continue
 
 		// Create a new task given this data.
-		tasks[taskId] = new Task(taskId, name, description)
+		tasks[taskId] = new Task(taskId, name, description, volunteersNeeded)
 	}
 
 	return tasks
