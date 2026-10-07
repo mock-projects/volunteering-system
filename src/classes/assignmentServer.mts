@@ -35,6 +35,29 @@ class AssignmentServer {
 	}
 
 	/**
+	 * Returns a sorted list of tasks,
+	 * with more-popular tasks appearing at the front.
+	 */
+	getTasksByPopularityLevel( ): Task[ ] {
+		return this.tasks.sort((task01, task02) => {
+			let score01 = 0
+			let score02 = 0
+
+			for (const volunteer of task01.assignees) {
+				score01 += volunteer.getTaskDesirabilityScore(task01)
+			}
+			for (const volunteer of task02.assignees) {
+				score02 += volunteer.getTaskDesirabilityScore(task02)
+			}
+
+			score01 /= task01.volunteersNeeded
+			score02 /= task02.volunteersNeeded
+
+			return score02 - score01
+		})
+	}
+
+	/**
 	 * Returns a sorted list of volunteers,
 	 * based on how interested they are in the given task.
 	 */
@@ -85,7 +108,19 @@ class AssignmentServer {
 	 * Assigns a volunteer to each task based on their interests.
 	 */
 	assignTasks( ) {
-		for (const task of this.tasks) {
+		// Sort tasks by popularity (less-popular tasks appear first).
+		let sortedTasks = this.getTasksByPopularityLevel( ).reverse( )
+		const popularTasks = sortedTasks.filter((task) => (
+			this.getInterestedVolunteers(task).length > 0
+		))
+		const unpopularTasks = sortedTasks.filter((task) => (
+			this.getInterestedVolunteers(task).length <= 0
+		))
+		// Less-popular tasks appear first, but zero-interest tasks appear last.
+		sortedTasks = [...popularTasks, ...unpopularTasks]
+
+		// Loop over each task and assign volunteers.
+		for (const task of sortedTasks) {
 			const volunteerCandidates = this.getVolunteersByInterestLevel(task)
 			if (task.volunteersNeeded > volunteerCandidates.length) {
 				throw new Error('A task needs too many volunteers.')
