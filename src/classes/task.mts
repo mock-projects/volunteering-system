@@ -70,7 +70,15 @@ class Task {
 		return this.event.volunteers.sort((vol01, vol02) => {
 			const score01 = vol01.getTaskDesirabilityScore(this)
 			const score02 = vol02.getTaskDesirabilityScore(this)
-			return score02 - score01
+			if (score01 !== score02) return score02 - score01 // Higher scores first.
+
+			const numAssigned01 = vol01.getAssignedTasks( ).length
+			const numAssigned02 = vol02.getAssignedTasks( ).length
+			if (numAssigned01 !== numAssigned02) return numAssigned01 - numAssigned02 // Fewer assigned first.
+
+			const numInterested01 = vol01.interestedTasks.length
+			const numInterested02 = vol02.interestedTasks.length
+			return numInterested01 - numInterested02  // Fewer interested first.
 		})
 	}
 
