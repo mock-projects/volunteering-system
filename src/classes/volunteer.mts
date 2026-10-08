@@ -68,7 +68,8 @@ class Volunteer {
 	 * Returns a number representing how satisfied a volunteer would be,
 	 * given a list of unique tasks that they are assigned.
 	 */
-	getSatisfactionScore(desiredMaxLoad?: number): number {
+	getSatisfactionScore(desiredMaxWorkload?: number): number {
+		desiredMaxWorkload ??= this.maxTaskWorkload( )
 		const assignedTasks = this.getAssignedTasks( )
 
 		let score: number = 0
@@ -76,11 +77,8 @@ class Volunteer {
 			score += this.getTaskDesirabilityScore(task)
 		})
 
-		if (!desiredMaxLoad) return score
-
-		// If there is a desired max load of tasks for this volunteer,
-		// then add a penalty for crossing that threshold.
-		const numOverloaded = assignedTasks.length - desiredMaxLoad
+		// Add a penalty for crossing the threshold of the max workload.
+		const numOverloaded = assignedTasks.length - desiredMaxWorkload
 		if (numOverloaded > 0) score -= numOverloaded
 		return score
 	}
