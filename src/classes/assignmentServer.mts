@@ -28,20 +28,7 @@ class AssignmentServer {
 	 */
 	getTasksByPopularityLevel( ): Task[ ] {
 		return this.tasks.sort((task01, task02) => {
-			let score01 = 0
-			let score02 = 0
-
-			for (const volunteer of task01.getInterestedVolunteers( )) {
-				score01 += volunteer.getTaskDesirabilityScore(task01)
-			}
-			for (const volunteer of task02.getInterestedVolunteers( )) {
-				score02 += volunteer.getTaskDesirabilityScore(task02)
-			}
-
-			score01 /= task01.volunteersNeeded
-			score02 /= task02.volunteersNeeded
-
-			return score02 - score01
+			return task02.getPopularityScore( ) - task01.getPopularityScore( )
 		})
 	}
 
