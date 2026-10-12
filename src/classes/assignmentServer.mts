@@ -27,7 +27,7 @@ class AssignmentServer {
 	 * with more-popular tasks appearing at the front.
 	 */
 	getTasksByPopularityLevel( ): Task[ ] {
-		return this.tasks.sort((task01, task02) => {
+		return this.tasks.toSorted((task01, task02) => {
 			return task02.getPopularityScore( ) - task01.getPopularityScore( )
 		})
 	}
@@ -60,25 +60,76 @@ class AssignmentServer {
 	 * Assigns a volunteer to each task based on their interests.
 	 */
 	assignTasks( ) {
-		// Sort tasks by popularity (less-popular tasks appear first).
-		let sortedTasks = this.getTasksByPopularityLevel( ).reverse( )
-		const popularTasks = sortedTasks.filter((task) => (
-			task.getInterestedVolunteers( ).length > 0
-		))
-		const unpopularTasks = sortedTasks.filter((task) => (
-			task.getInterestedVolunteers( ).length <= 0
-		))
-		// Less-popular tasks appear first, but zero-interest tasks appear last.
-		sortedTasks = [...popularTasks, ...unpopularTasks]
 
-		// Loop over each task and assign volunteers.
-		for (const task of sortedTasks) {
-			const volunteerCandidates = task.getVolunteersByInterestLevel( )
-			if (task.volunteersNeeded > volunteerCandidates.length) {
-				throw new Error('A task needs too many volunteers.')
+		/*
+		The intention of this loop is to:
+		- loop over each "rank" of assignments, starting with #1.
+		- find the most "unpopular" tasks, and assign volunteers to them.
+		- Volunteers are sorted by (1) how many tasks they are assigned (lowest first),
+			with (2) how many tasks they are interested in as a tiebreaker.
+		- Volunteers who have a full schedule are skipped entirely.
+		*/
+		let sortedTasks = this.getTasksByPopularityLevel( ).reverse( )
+		let interestIndex = 0
+
+		while (this.volunteers.some((volunteer) => (
+			volunteer.interestedTasks.length > interestIndex
+		))) {
+			// Find a volunteer with rank i for each task.
+			for (const task of sortedTasks) {
+				// Skip tasks that have no slots remaining.
+				if (!task.hasOpenSlots) continue
+
+				// Find the most interested, most available, pickiest volunteers.
+				const volunteers = task.getVolunteersByInterestLevel( )
+				const selectedVolunteer = volunteers.find((volunteer) => (
+					!task.assignees.has(volunteer)
+					&& volunteer.hasAvailability( )
+					&& volunteer.interestedTasks.indexOf(task) === interestIndex
+				))
+
+				// Skip tasks without enough enthusiasm.
+				if (selectedVolunteer == undefined) continue
+
+				// Assign our top candidate.
+				task.assignees.add(selectedVolunteer)
 			}
-			const volunteers = volunteerCandidates.slice(0, task.volunteersNeeded)
-			for (const volunteer of volunteers) task.assignees.add(volunteer)
+
+			// Updated how popular tasks are after assignments.
+			sortedTasks = this.getTasksByPopularityLevel( ).reverse( )
+			interestIndex += 1
+		}
+
+
+		/*
+		This loop will assign leftover tasks
+		to the most available volunteers remaining.
+		*/
+		while (
+			this.volunteers.some((volunteer) => (
+				volunteer.hasAvailability( )
+			))
+			&& this.tasks.some((task) => (
+				task.hasOpenSlots
+			))
+		) {
+			for (const task of sortedTasks) {
+				// Skip tasks that have no slots remaining.
+				if (!task.hasOpenSlots) continue
+
+				// Find the most available, happiest volunteers.
+				const volunteers = this.getVolunteersByAvailability( )
+				const selectedVolunteer = volunteers.find((volunteer) => (
+					!task.assignees.has(volunteer)
+					&& volunteer.hasAvailability( )
+				))
+
+				// Skip tasks that cannot be filled.
+				if (selectedVolunteer == undefined) continue
+
+				// Assign our top candidate.
+				task.assignees.add(selectedVolunteer)
+			}
 		}
 	}
 
