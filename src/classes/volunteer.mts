@@ -6,12 +6,30 @@ class Volunteer {
 	id: number
 	name: string
 	interestedTasks: Task[ ]
+	#maxTaskWorkload: number | null
 
-	constructor(event: AssignmentServer, id: number, name: string) {
+	constructor(event: AssignmentServer, id: number, name: string, maxTaskWorkload?: number) {
 		this.event = event
 		this.id = id
 		this.name = name
 		this.interestedTasks = [ ]
+		this.#maxTaskWorkload = maxTaskWorkload ?? null
+	}
+
+	/**
+	 * Returns a number representing how many tasks that a
+	 * volunteer would like to be assigned to, at maximum.
+	 */
+	maxTaskWorkload( ) {
+		// Checks if there is already a maximum registered to the user.
+		if (this.#maxTaskWorkload != null) return this.#maxTaskWorkload
+
+		// Calculates a sensible default maximum number of tasks.
+		const numVolunteers = this.event.volunteers.length
+		const numTaskSlots = this.event.tasks.reduce((openSlots, task) => {
+			return openSlots + task.volunteersNeeded
+		}, 0)
+		return Math.ceil(numTaskSlots / numVolunteers)
 	}
 
 	/**
@@ -21,6 +39,18 @@ class Volunteer {
 		return this.event.tasks.filter((task) => {
 			return task.assignees.has(this)
 		})
+	}
+
+	countAssignedTasks( ) {
+		return this.getAssignedTasks( ).length
+	}
+
+	getAvailability( ) {
+		return Math.max(0, this.maxTaskWorkload( ) - this.countAssignedTasks( ))
+	}
+
+	hasAvailability( ) {
+		return this.getAvailability( ) > 0
 	}
 
 	/**
