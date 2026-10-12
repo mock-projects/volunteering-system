@@ -1,37 +1,25 @@
+import {loadTasks, loadVolunteers} from '../utilities/util.mts'
 import type {Task} from './task.mts'
 import type {Volunteer} from './volunteer.mts'
 
 class AssignmentServer {
-	tasksById: Record<number, Task>
-	volunteersById: Record<number, Volunteer>
+	#tasks: Set<Task>
+	#volunteers: Set<Volunteer>
 
-	constructor(
-		tasksById: Record<number, Task>,
-		volunteersById: Record<number, Volunteer>,
+	constructor( ) {
+		this.#tasks = new Set( )
+		this.#volunteers = new Set( )
+	}
+
+	get tasks( ) {return [...this.#tasks]}
+	get volunteers( ) {return [...this.#volunteers]}
+
+	async loadCsvData(
+		tasksCsvFilepath: string,
+		volunteersCsvFilePath: string,
 	) {
-		this.tasksById = tasksById
-		this.volunteersById = volunteersById
-	}
-
-	get tasks( ) {return Object.values(this.tasksById)}
-	get volunteers( ) {return Object.values(this.volunteersById)}
-
-	/**
-	 * Returns a list of tasks that were assigned to specified volunteer.
-	 */
-	getAssignedTasks(volunteer: Volunteer): Task[ ] {
-		return this.tasks.filter((task) => {
-			return task.assignees.includes(volunteer)
-		})
-	}
-
-	/**
-	 * Returns a list of volunteers who are interested in the given task.
-	 */
-	getInterestedVolunteers(task: Task): Volunteer[ ] {
-		return this.volunteers.filter((volunteer) => {
-			return volunteer.interestedTasks.includes(task)
-		})
+		this.#tasks = await loadTasks(this, tasksCsvFilepath)
+		this.#volunteers = await loadVolunteers(this, volunteersCsvFilePath)
 	}
 
 	/**
@@ -39,67 +27,31 @@ class AssignmentServer {
 	 * with more-popular tasks appearing at the front.
 	 */
 	getTasksByPopularityLevel( ): Task[ ] {
-		return this.tasks.sort((task01, task02) => {
-			let score01 = 0
-			let score02 = 0
-
-			for (const volunteer of task01.assignees) {
-				score01 += volunteer.getTaskDesirabilityScore(task01)
-			}
-			for (const volunteer of task02.assignees) {
-				score02 += volunteer.getTaskDesirabilityScore(task02)
-			}
-
-			score01 /= task01.volunteersNeeded
-			score02 /= task02.volunteersNeeded
-
-			return score02 - score01
+		return this.tasks.toSorted((task01, task02) => {
+			return task02.getPopularityScore( ) - task01.getPopularityScore( )
 		})
 	}
 
-	/**
-	 * Returns a sorted list of volunteers,
-	 * based on how interested they are in the given task.
-	 */
-	getVolunteersByInterestLevel(task: Task): Volunteer[ ] {
-		return this.volunteers.sort((vol01, vol02) => {
-			const score01 = vol01.getTaskDesirabilityScore(task)
-			const score02 = vol02.getTaskDesirabilityScore(task)
-			return score02 - score01
+	getVolunteersByAvailability( ): Volunteer[ ] {
+		return this.volunteers.toSorted((vol01, vol02) => {
+			const availability01 = vol01.getAvailability( )
+			const availability02 = vol02.getAvailability( )
+			// Volunteers with higher availability appear first.
+			if (availability01 !== availability02) return availability01 - availability02
+
+			const score01 = vol01.getSatisfactionScore( )
+			const score02 = vol02.getSatisfactionScore( )
+			return score01 - score02 // Higher satisfaction first, as tiebreaker.
 		})
-	}
-
-	/**
-	 * Returns a number representing how satisfied a volunteer would be,
-	 * given a list of unique tasks that they are assigned.
-	 */
-	getSatisfactionLevel(volunteer: Volunteer, desiredMaxLoad?: number): number {
-		const assignedTasks = this.getAssignedTasks(volunteer)
-
-		let score: number = 0
-		assignedTasks.forEach((task) => {
-			score += volunteer.getTaskDesirabilityScore(task)
-		})
-
-		if (!desiredMaxLoad) return score
-
-		// If there is a desired max load of tasks for this volunteer,
-		// then add a penalty for crossing that threshold.
-		const numOverloaded = assignedTasks.length - desiredMaxLoad
-		if (numOverloaded > 0) score -= numOverloaded
-		return score
 	}
 
 	/**
 	 * Returns the overall satisfaction rating for all volunteers in the server.
 	 */
-	getOverallSatisfactionLevel( ): number {
-		// Penalize the score of volunteers who get assigned too many tasks.
-		const maxTaskLoad = Math.ceil(this.tasks.length / this.volunteers.length)
-
+	getOverallSatisfactionScore( ): number {
 		let score = 0
 		for (const volunteer of this.volunteers) {
-			score += this.getSatisfactionLevel(volunteer, maxTaskLoad)
+			score += volunteer.getSatisfactionScore( )
 		}
 		return score
 	}
@@ -108,25 +60,76 @@ class AssignmentServer {
 	 * Assigns a volunteer to each task based on their interests.
 	 */
 	assignTasks( ) {
-		// Sort tasks by popularity (less-popular tasks appear first).
-		let sortedTasks = this.getTasksByPopularityLevel( ).reverse( )
-		const popularTasks = sortedTasks.filter((task) => (
-			this.getInterestedVolunteers(task).length > 0
-		))
-		const unpopularTasks = sortedTasks.filter((task) => (
-			this.getInterestedVolunteers(task).length <= 0
-		))
-		// Less-popular tasks appear first, but zero-interest tasks appear last.
-		sortedTasks = [...popularTasks, ...unpopularTasks]
 
-		// Loop over each task and assign volunteers.
-		for (const task of sortedTasks) {
-			const volunteerCandidates = this.getVolunteersByInterestLevel(task)
-			if (task.volunteersNeeded > volunteerCandidates.length) {
-				throw new Error('A task needs too many volunteers.')
+		/*
+		The intention of this loop is to:
+		- loop over each "rank" of assignments, starting with #1.
+		- find the most "unpopular" tasks, and assign volunteers to them.
+		- Volunteers are sorted by (1) how many tasks they are assigned (lowest first),
+			with (2) how many tasks they are interested in as a tiebreaker.
+		- Volunteers who have a full schedule are skipped entirely.
+		*/
+		let sortedTasks = this.getTasksByPopularityLevel( ).reverse( )
+		let interestIndex = 0
+
+		while (this.volunteers.some((volunteer) => (
+			volunteer.interestedTasks.length > interestIndex
+		))) {
+			// Find a volunteer with rank i for each task.
+			for (const task of sortedTasks) {
+				// Skip tasks that have no slots remaining.
+				if (!task.hasOpenSlots) continue
+
+				// Find the most interested, most available, pickiest volunteers.
+				const volunteers = task.getVolunteersByInterestLevel( )
+				const selectedVolunteer = volunteers.find((volunteer) => (
+					!task.assignees.has(volunteer)
+					&& volunteer.hasAvailability( )
+					&& volunteer.interestedTasks.indexOf(task) === interestIndex
+				))
+
+				// Skip tasks without enough enthusiasm.
+				if (selectedVolunteer == undefined) continue
+
+				// Assign our top candidate.
+				task.assignees.add(selectedVolunteer)
 			}
-			const volunteers = volunteerCandidates.slice(0, task.volunteersNeeded)
-			task.assignees.push(...volunteers)
+
+			// Updated how popular tasks are after assignments.
+			sortedTasks = this.getTasksByPopularityLevel( ).reverse( )
+			interestIndex += 1
+		}
+
+
+		/*
+		This loop will assign leftover tasks
+		to the most available volunteers remaining.
+		*/
+		while (
+			this.volunteers.some((volunteer) => (
+				volunteer.hasAvailability( )
+			))
+			&& this.tasks.some((task) => (
+				task.hasOpenSlots
+			))
+		) {
+			for (const task of sortedTasks) {
+				// Skip tasks that have no slots remaining.
+				if (!task.hasOpenSlots) continue
+
+				// Find the most available, happiest volunteers.
+				const volunteers = this.getVolunteersByAvailability( )
+				const selectedVolunteer = volunteers.find((volunteer) => (
+					!task.assignees.has(volunteer)
+					&& volunteer.hasAvailability( )
+				))
+
+				// Skip tasks that cannot be filled.
+				if (selectedVolunteer == undefined) continue
+
+				// Assign our top candidate.
+				task.assignees.add(selectedVolunteer)
+			}
 		}
 	}
 
@@ -137,7 +140,7 @@ class AssignmentServer {
 		for (const task of this.tasks) {
 			const assignees = task.assignees
 			console.log(`${task}`)
-			if (assignees !== undefined && assignees.length > 0) {
+			if (assignees !== undefined && assignees.size > 0) {
 				for (const assignee of assignees) {
 					console.log(`\tAssigned to ${assignee}`)
 				}
@@ -147,7 +150,7 @@ class AssignmentServer {
 			}
 			console.log( )
 		}
-		console.log(`Satisfaction Score: ${this.getOverallSatisfactionLevel( )}`)
+		console.log(`Satisfaction Score: ${this.getOverallSatisfactionScore( )}`)
 	}
 }
 
