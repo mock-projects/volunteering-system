@@ -32,6 +32,19 @@ class AssignmentServer {
 		})
 	}
 
+	getVolunteersByAvailability( ): Volunteer[ ] {
+		return this.volunteers.toSorted((vol01, vol02) => {
+			const availability01 = vol01.getAvailability( )
+			const availability02 = vol02.getAvailability( )
+			// Volunteers with higher availability appear first.
+			if (availability01 !== availability02) return availability01 - availability02
+
+			const score01 = vol01.getSatisfactionScore( )
+			const score02 = vol02.getSatisfactionScore( )
+			return score01 - score02 // Higher satisfaction first, as tiebreaker.
+		})
+	}
+
 	/**
 	 * Returns the overall satisfaction rating for all volunteers in the server.
 	 */
