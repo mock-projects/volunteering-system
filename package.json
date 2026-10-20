@@ -1,6 +1,6 @@
 {
-	"name": "volunteer",
-	"description": "Volunteer",
+	"name": "volunteering-system",
+	"description": "A system that is designed to handle a list of volunteers and tasks, and set up assignments based on user preferences.",
 	"version": "1.0.0",
 	"contributors": [
 		"Byteboard, Inc.",
